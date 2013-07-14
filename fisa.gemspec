@@ -23,4 +23,5 @@ Gem::Specification.new do |spec|
   spec.add_runtime_dependency "pony"
   spec.add_runtime_dependency "twilio-rb"
   spec.add_runtime_dependency "bini"
+  spec.add_runtime_dependency "slop"
 end

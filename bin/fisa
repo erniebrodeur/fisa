@@ -1,3 +1,18 @@
 #!/usr/bin/env ruby
 
 require 'fisa'
+
+# if sha = check_fisa(test: (ARGV[0] == "test"), test_error: (ARGV[0] == "test_error"))
+#   url = "http://www.uscourts.gov/uscourts/courts/fisc/index.html"
+#   short_msg = "Just updated with something!\n#{url}"
+#   long_msg = short_msg.dup
+
+#   if config['github'] and sha.is_a?(String)
+#     diff_url = "https://github.com/#{config['github']}/commit/#{sha}"
+#     long_msg += "\n\nLine-by-line breakdown of what changed:\n#{diff_url}"
+#   end
+
+#   notify_fisa long_msg, short_msg
+# end
+
+puts 'test'

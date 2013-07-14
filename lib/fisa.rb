@@ -1,53 +1,36 @@
-require "fisa/version"
 require 'rubygems'
-require 'yaml'
-require 'fileutils'
-require 'open-uri'
+Bundler.setup(:default)
+
+# Bundler misses a few things, always.
 require 'git'
-require 'twitter'
-require 'pony'
-require 'twilio-rb'
-require 'pushover'
+require 'bini'
+
+require "fisa/version"
+
 
 module Fisa
 	extend self
 
-	FileUtils.chdir File.dirname(__FILE__)
+	Bini.long_name = "fisa"
+	Config = Bini::Sash.new options:{file:"#{Bini.config_dir}/#{Bini.long_name}.yaml", autoload:true}
 
-	@git = Git.open './'
-
-	def initialize
-		if config['twitter']
-		  Twitter.configure do |twitter|
-		    twitter.consumer_key = config['twitter']['consumer_key']
-		    twitter.consumer_secret = config['twitter']['consumer_secret']
-		    twitter.oauth_token = config['twitter']['oauth_token']
-		    twitter.oauth_token_secret = config['twitter']['oauth_token_secret']
-		  end
-		end
-
-		if config['twilio']
-		  Twilio::Config.setup(
-		    account_sid: config['twilio']['account_sid'],
-		    auth_token: config['twilio']['auth_token']
-		  )
-		end
-
-		if config['pushover']
-		  Pushover.configure do |pushover|
-		    pushover.user = config['pushover']['user_key']
-		    pushover.token = config['pushover']['app_key']
-		  end
-		end
-
+	# TODO make this more robust, not a good way to confirm a git dir is around.
+	repo_dir = "#{Bini.data_dir}/repo"
+	unless Dir.exist? repo_dir
+		Git = Git.init repo_dir
+	else
+		Git = Git.open repo_dir
 	end
 
-	def config
-	  @config ||= YAML.load(File.read("config.yml"))
+	def initialize
+		configure_twitter if Config[:twitter]
+		configure_twilio if Config[:twilio]
+		configure_pushover if Config[:pushover]
 	end
 
 	# check FISA court for updates, compare to last check
 	def check_fisa(test: false, test_error: false)
+		# TODO, def this out.
 	  return "test" if test
 
 	  puts "Pulling latest changes..."
@@ -85,9 +68,9 @@ module Fisa
 	        puts ex.inspect
 
 	        msg = "Git error!"
-	        Pony.mail(config['email'].merge(body: msg)) if config['email']
-	        Twilio::SMS.create(to: config['twilio']['to'], from: config['twilio']['from'], body: msg) if config['twilio']
-	        Pushover.notification(title: msg, message: msg) if config['pushover']
+	        Pony.mail(Config[:email].merge(body: msg)) if Config[:email]
+	        Twilio::SMS.create(to: Config[:twilio][:to], from: Config[:twilio][:from], body: msg) if Config[:twilio]
+	        Pushover.notification(title: msg, message: msg) if Config[:pushover]
 
 	        true
 	      end
@@ -102,10 +85,10 @@ module Fisa
 	def notify_fisa(long_msg, short_msg)
 
 	  # do in order of importance, in case it blows up in the middle
-	  Twilio::SMS.create(to: config['twilio']['to'], from: config['twilio']['from'], body: short_msg) if config['twilio']
-	  Pony.mail(config['email'].merge(body: long_msg)) if config['email']
-	  Twitter.update(long_msg) if config['twitter']
-	  Pushover.notification(title: short_msg, message: long_msg) if config['pushover']
+	  Twilio::SMS.create(to: Config[:twilio][:to], from: Config[:twilio][:from], body: short_msg) if Config[:twilio]
+	  Pony.mail(Config[:email].merge(body: long_msg)) if Config[:email]
+	  Twitter.update(long_msg) if Config[:twitter]
+	  Pushover.notification(title: short_msg, message: long_msg) if Config[:pushover]
 
 	  puts "Notified: #{long_msg}"
 	end
@@ -114,18 +97,28 @@ module Fisa
 	  @git.diff('HEAD','fisa.html').entries.length != 0
 	end
 
-	def run
-		if sha = check_fisa(test: (ARGV[0] == "test"), test_error: (ARGV[0] == "test_error"))
-		  url = "http://www.uscourts.gov/uscourts/courts/fisc/index.html"
-		  short_msg = "Just updated with something!\n#{url}"
-		  long_msg = short_msg.dup
-
-		  if config['github'] and sha.is_a?(String)
-		    diff_url = "https://github.com/#{config['github']}/commit/#{sha}"
-		    long_msg += "\n\nLine-by-line breakdown of what changed:\n#{diff_url}"
-		  end
-
-		  notify_fisa long_msg, short_msg
-		end
+	private
+	def configure_twitter
+	  Twitter.configure do |twitter|
+	    twitter.consumer_key = Config[:twitter][:consumer_key]
+	    twitter.consumer_secret = Config[:twitter][:consumer_secret]
+	    twitter.oauth_token = Config[:twitter][:oauth_token]
+	    twitter.oauth_token_secret = Config[:twitter][:oauth_token_secret]
+	  end
 	end
+
+	def configure_twilio
+	  Twilio::Config.setup(
+	    account_sid: Config[:twilio][:account_sid],
+	    auth_token: Config[:twilio][:auth_token]
+	  )
+	end
+
+	def configure_pushover
+	  Pushover.configure do |pushover|
+	    pushover.user = Config[:pushover][:user_key]
+	    pushover.token = Config[:pushover][:app_key]
+	  end
+	end
+
 end
