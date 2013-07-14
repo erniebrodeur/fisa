@@ -1,3 +1,6 @@
+Gemfile.lock
+pkg/*
+tmp/*
 /config.yml
 /config.yml.real
 /config.yml.test
