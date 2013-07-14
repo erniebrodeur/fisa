@@ -50,9 +50,9 @@ module Fisa
 
 	    if changed? or test_error
 	      begin
-	        @git.add "fisa.html"
-	        response = @git.commit "FISC docket has been updated"
-	        sha = @git.gcommit(response.split(/[ \[\]]/)[2]).sha
+	        Git.add "fisa.html"
+	        response = Git.commit "FISC docket has been updated"
+	        sha = Git.gcommit(response.split(/[ \[\]]/)[2]).sha
 	        puts "[#{sha}] Committed update"
 
 	        system "git push"
@@ -94,7 +94,7 @@ module Fisa
 	end
 
 	def changed?
-	  @git.diff('HEAD','fisa.html').entries.length != 0
+	  Git.diff('HEAD','fisa.html').entries.length != 0
 	end
 
 	private
